@@ -104,6 +104,7 @@ const (
 	ERRFMT_VIEW_ONSUCC_DEFAULT = true /* generate success message in VIEW */
 	ERRFMT_TEXT_DEFAULT        = "%d: %s"
 	ASYNCCALL_DEFAULT          = false
+	STREAM_DEFAULT             = false
 	WORKERS                    = 10 /* Number of worker processes */
 )
 
@@ -162,8 +163,10 @@ type ServiceMap struct {
 	UrlField string `json:"urlfield"` //Field for URL in case of CONV_JSON2UBF and CONV_JSON
 
 	// Parsing request headers/Cookies
-	Parseheaders bool `json:"parseheaders"` // Default false
-	Parsecookies bool `json:"parsecookies"` // Default false
+	Parseheaders    bool   `json:"parseheaders"`      // Default false
+	Parsecookies    bool   `json:"parsecookies"`      // Default false
+	JsonCookieField string `json:"json_cookie_field"` //Field for Cookie object in case of CONV_JSON
+	JsonHeaderField string `json:"json_header_field"` //Field for Headers in case of CONV_JSON
 	Parseform    bool `json:"parseform"`    // Parse form data and load into UBF
 
 	//For ext mode:
@@ -183,6 +186,8 @@ type ServiceMap struct {
 
 	StaticDir  string       `json:"staticdir"` //Static files directory
 	FileServer http.Handler //File server handler for static content
+
+	Stream bool `json:"stream"` // File streaming mode - e.g. file download handler
 }
 
 //Route information structure for Handles with Regexp path
@@ -439,6 +444,7 @@ func parseHTTPErrorMap(ac *atmi.ATMICtx, svc *ServiceMap) error {
 func printSvcSummary(ac *atmi.ATMICtx, svc *ServiceMap) {
 	ac.TpLogWarn("Service: %s, Url: %s, Async mode: %t, Log request svc: [%s], "+
 		"Errors:%d (%s), Async echo %t, "+
+		"Streaming mode: %t, " +
 		"Filters: inman:%s/inopt:%s/inerr:%s/outman:%s/outopt:%s/outerr:%s",
 		svc.Svc,
 		svc.Url,
@@ -447,6 +453,7 @@ func printSvcSummary(ac *atmi.ATMICtx, svc *ServiceMap) {
 		svc.Errors_int,
 		svc.Errors,
 		svc.Asyncecho,
+		svc.Stream,
 		svc.Finman, svc.Finopt, svc.Finerr, svc.Foutman, svc.Foutopt, svc.Fouterr)
 }
 
@@ -549,6 +556,7 @@ func appinit(ac *atmi.ATMICtx) error {
 	M_defaults.Errfmt_text = ERRFMT_TEXT_DEFAULT
 	M_defaults.Asynccall = ASYNCCALL_DEFAULT
 	M_defaults.Errfmt_view_onsucc = ERRFMT_VIEW_ONSUCC_DEFAULT
+	M_defaults.Stream = STREAM_DEFAULT
 
 	M_workers = WORKERS
 

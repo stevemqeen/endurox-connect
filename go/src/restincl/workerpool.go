@@ -41,6 +41,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/base64"
+	"os"
+	"io"
 	"ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
@@ -66,6 +69,32 @@ Workes will wait on <-M_waitjobchan[M_workers], when complete they will do Nr ->
 var M_freechan chan int //List of free channels submitted by wokers
 
 var M_ctxs []*atmi.ATMICtx //List of contexts
+
+// Generates a file form a Base64 string and writes it to response
+func generateFileFromBase64(fileContentsB64 string, tmpFileName string, w http.ResponseWriter) {
+	decodedFileContent, err := base64.StdEncoding.DecodeString(fileContentsB64)
+	if err != nil {
+		panic(err)
+	}
+
+	f, err := os.Create(tmpFileName)
+	if err != nil {
+		panic(err)
+	}
+
+	defer f.Close()
+
+	if _, err := f.Write(decodedFileContent); err != nil {
+		panic(err)
+	}
+
+	if err := f.Sync(); err != nil {
+		panic(err)
+	}
+	f.Seek(0, 0)
+	io.Copy(w, f)
+	os.Remove(tmpFileName)
+}
 
 //Generate the headers for UBF mode and for EXT mode
 //Return content type if available
@@ -323,6 +352,9 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 			var errU atmi.UBFError
 
 			rsp, errU = bufu.BGetByteArr(ubftab.EX_IF_RSPDATA, 0)
+			if svc.Stream {
+				generateFileFromBase64(string(rsp), "./tempfilename", w)
+			}
 
 			if nil != errU {
 				ac.TpLogError("Failed to get body: %s", errU.Error())
@@ -599,10 +631,75 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 			if !ok {
 				ac.TpLogError("Failed to cast buffer to TypedJSON")
 				err = atmi.NewCustomATMIError(atmi.TPEINVAL,
-					"Failed to cast buffer to ypedJSON")
+					"Failed to cast buffer to TypedJSON")
 			} else {
 				//Set the bytes to string we got
 				rsp = []byte(bufs.GetJSON())
+				var errj error
+
+				//If parsing headers is enabled, do that
+				if svc.Parseheaders {
+					//Convert JSON to map[string]interface{}
+					var jsonObj interface{}
+					if errj := json.Unmarshal(rsp, &jsonObj); errj != nil {
+						ac.TpLogError("Failed to unmarshal JSON: %v", errj.Error())
+						err = atmi.NewCustomATMIError(atmi.TPEINVAL,
+							"Failed to unmarshal JSON")
+					}
+					obj := jsonObj.(map[string]interface{})
+
+					var header map[string]interface{}
+					if svc.JsonHeaderField != "" {
+						header = obj[svc.JsonHeaderField].(map[string]interface{})
+						delete(obj, svc.JsonHeaderField)
+					} else {
+						header = obj["Header"].(map[string]interface{})
+						delete(obj, "Header")
+					}
+					//Add headers to ResponseWriter
+					for k, v := range header {
+						for _, val := range v.([]interface{}) {
+							w.Header().Set(k, val.(string))
+						}
+					}
+					//Parse Cookies if necessary
+					if svc.Parsecookies {
+						var cookie []interface{}
+						if svc.JsonCookieField != "" {
+							cookie = obj[svc.JsonCookieField].([]interface{})
+							delete(obj, svc.JsonCookieField)
+						} else {
+							cookie = obj["Cookie"].([]interface{})
+							delete(obj, "Cookie")
+						}
+						//Add Cookies to ResponseWriter
+						for _, val := range cookie {
+							c := val.(map[string]interface{})
+							ck := &http.Cookie{}
+							if c["Name"].(string) != "" {
+								ck.Name = c["Name"].(string)
+								ck.Value = c["Value"].(string)
+								ck.Path = c["Path"].(string)
+								ck.Domain = c["Domain"].(string)
+								ck.Expires, _ = time.Parse(time.RFC3339, c["RawExpires"].(string))
+								ck.RawExpires = c["RawExpires"].(string)
+								ck.MaxAge = int(c["MaxAge"].(float64))
+								ck.Secure = c["Secure"].(bool)
+								ck.HttpOnly = c["HttpOnly"].(bool)
+								//ck.SameSite = c["SameSite"].(SameSite)
+								ck.Raw = c["Raw"].(string)
+							}
+							http.SetCookie(w, ck)
+						}
+					}
+
+					//Convert map object back to JSON
+					if rsp, errj = json.Marshal(obj); errj != nil {
+						ac.TpLogError("Failed to marshal JSON: %v", errj.Error())
+						err = atmi.NewCustomATMIError(atmi.TPEINVAL,
+							"Failed to marshal JSON")
+					}
+				}
 			}
 		}
 		break
@@ -1048,7 +1145,8 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 				return atmi.FAIL
 			}
 
-			if svc.Format == "r" || svc.Format == "regexp" {
+			if svc.Format == "r" || svc.Format == "regexp" || svc.Parseheaders {
+				//Convert JSON to map interface object
 				var jsonObj interface{}
 				if err := json.Unmarshal([]byte(bufj.GetJSON()), &jsonObj); err != nil {
 					ac.TpLogError("Failed to unmarshal JSON: %v", err.Error())
@@ -1056,12 +1154,33 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 				}
 				obj := jsonObj.(map[string]interface{})
 
-				if svc.UrlField != "" {
-					obj[svc.UrlField] = req.URL.Path
-				} else {
-					obj["EX_IF_URL"] = req.URL.Path
+				//Add URL to JSON
+				if svc.Format == "r" || svc.Format == "regexp" {
+					if svc.UrlField != "" {
+						obj[svc.UrlField] = req.URL.Path
+					} else {
+						obj["EX_IF_URL"] = req.URL.Path
+					}
 				}
 
+				// Add header data to UBF fields
+				if svc.Parseheaders {
+					if svc.JsonHeaderField != "" {
+						obj[svc.JsonHeaderField] = req.Header
+					} else {
+						obj["Header"] = req.Header
+					}
+					//Add Cookies to JSON
+					if svc.Parsecookies {
+						if svc.JsonCookieField != "" {
+							obj[svc.JsonCookieField] = req.Cookies()
+						} else {
+							obj["Cookie"] = req.Cookies()
+						}
+					}
+				}
+
+				//Convert object to JSON
 				if barr, err2 := json.Marshal(obj); err2 == nil {
 					if err = bufj.SetJSON(barr); err != nil {
 						ac.TpLogError("Failed to set JSON: %v", err.Error())
@@ -1071,7 +1190,6 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 					ac.TpLogError("Failed to marshal JSON: %v", err2.Error())
 					return atmi.FAIL
 				}
-
 			}
 
 			buf = bufj
