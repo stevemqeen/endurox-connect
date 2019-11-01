@@ -800,7 +800,11 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 	ac.TpLogDump(atmi.LOG_DEBUG, "Sending response back", rsp, len(rsp))
 	w.Header().Set("Content-Length", strconv.Itoa(len(rsp)))
 
-	w.Write(rsp)
+	if svc.Stream {
+		w.Write([]byte("OK"))
+	} else {
+		w.Write(rsp)
+	}
 }
 
 //Common function parsing http request headers
