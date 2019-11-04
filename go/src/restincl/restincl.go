@@ -50,7 +50,7 @@ import (
 	"strings"
 	"syscall"
 	u "ubftab"
-
+	"github.com/dlclark/regexp2"
 	atmi "github.com/endurox-dev/endurox-go"
 )
 
@@ -192,7 +192,7 @@ type ServiceMap struct {
 
 //Route information structure for Handles with Regexp path
 type route struct {
-	pattern *regexp.Regexp
+	pattern *regexp2.Regexp
 	handler http.Handler
 }
 
@@ -247,7 +247,7 @@ var M_handler RegexpHandler //Global HTTP call handler which contains regexp and
 // to handle request
 //if regexp patters is nil, then add exact match URL, otherwise add compiled regexp
 //and handler to global handler struct
-func (h *RegexpHandler) HandleFunc(pattern *regexp.Regexp, svc ServiceMap) {
+func (h *RegexpHandler) HandleFunc(pattern *regexp2.Regexp, svc ServiceMap) {
 	if svc.Format == "regexp" || svc.Format == "r" {
 		h.regexpRoutes = append(h.regexpRoutes, &route{pattern, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -296,7 +296,8 @@ func (h *RegexpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for _, route := range h.regexpRoutes {
 		//M_ac.TpLogInfo("REX ServeHTTP: [%s]", r.URL.Path)
-		if route.pattern.MatchString(r.URL.Path) {
+		matched, _ := route.pattern.MatchString(r.URL.Path)
+		if matched {
 			route.handler.ServeHTTP(w, r)
 			return
 		}
@@ -776,7 +777,7 @@ func appinit(ac *atmi.ATMICtx) error {
 			ac.TpLogInfo("Checking if service uses regexp")
 			//Add to HTTP listener
 			if tmp.Format == "regexp" || tmp.Format == "r" {
-				if r, err := regexp.Compile(fldName); err == nil {
+				if r, err := regexp2.Compile(fldName, 0); err == nil {
 					ac.TpLogInfo("Regexp compiled")
 					M_handler.HandleFunc(r, tmp)
 				} else {
