@@ -1140,7 +1140,7 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 			break
 		case CONV_JSON:
 			//Use request buffer as JSON
-
+			fmt.Println("restin:Request body", body, string(body))
 			bufj, err1 := ac.NewJSON(body)
 
 			if nil != err1 {
@@ -1149,16 +1149,23 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 				genRsp(ac, nil, svc, w, err1, false, false)
 				return atmi.FAIL
 			}
-
+			fmt.Println("restin:bufj.GetJSON()", string(bufj.GetJSON()))
 			if svc.Format == "r" || svc.Format == "regexp" || svc.Parseheaders {
 				//Convert JSON to map interface object
 				var jsonObj interface{}
-				if err := json.Unmarshal([]byte(bufj.GetJSON()), &jsonObj); err != nil {
+				decoder := json.NewDecoder(strings.NewReader(string(bufj.GetJSON())))
+				decoder.UseNumber()
+				if err := decoder.Decode(&jsonObj); err != nil {
+					ac.TpLogError("Failed to unmarshal JSON: %v", err.Error())
+                                        return atmi.FAIL
+				}
+				/*if err := json.Unmarshal([]byte(bufj.GetJSON()), &jsonObj); err != nil {
 					ac.TpLogError("Failed to unmarshal JSON: %v", err.Error())
 					return atmi.FAIL
-				}
+				}*/
+				fmt.Println("restin:jsonObj", jsonObj)
 				obj := jsonObj.(map[string]interface{})
-
+				fmt.Println("restin:obj", obj)
 				//Add URL to JSON
 				if svc.Format == "r" || svc.Format == "regexp" {
 					if svc.UrlField != "" {
@@ -1187,6 +1194,7 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 
 				//Convert object to JSON
 				if barr, err2 := json.Marshal(obj); err2 == nil {
+					fmt.Println("restin:barr", string(barr))
 					if err = bufj.SetJSON(barr); err != nil {
 						ac.TpLogError("Failed to set JSON: %v", err.Error())
 						return atmi.FAIL
