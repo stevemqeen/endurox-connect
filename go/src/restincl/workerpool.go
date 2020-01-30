@@ -668,11 +668,19 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 				if svc.Parseheaders {
 					//Convert JSON to map[string]interface{}
 					var jsonObj interface{}
-					if errj := json.Unmarshal(rsp, &jsonObj); errj != nil {
-						ac.TpLogError("Failed to unmarshal JSON: %v", errj.Error())
+					
+					decoder := json.NewDecoder(strings.NewReader(string(rsp)))
+					decoder.UseNumber()
+					if errj := decoder.Decode(&jsonObj); errj != nil {
+						ac.TpLogError("Failed to unmarshal JSON: %v", errj.Error())   	
 						err = atmi.NewCustomATMIError(atmi.TPEINVAL,
 							"Failed to unmarshal JSON")
 					}
+					/*if errj := json.Unmarshal(rsp, &jsonObj); errj != nil {
+						ac.TpLogError("Failed to unmarshal JSON: %v", errj.Error())
+						err = atmi.NewCustomATMIError(atmi.TPEINVAL,
+							"Failed to unmarshal JSON")
+					}*/
 					obj := jsonObj.(map[string]interface{})
 
 					var header map[string]interface{}
@@ -710,7 +718,8 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 								ck.Domain = c["Domain"].(string)
 								ck.Expires, _ = time.Parse(time.RFC3339, c["RawExpires"].(string))
 								ck.RawExpires = c["RawExpires"].(string)
-								ck.MaxAge = int(c["MaxAge"].(float64))
+								age, _ := c["MaxAge"].(json.Number).Int64()
+								ck.MaxAge = int(age)
 								ck.Secure = c["Secure"].(bool)
 								ck.HttpOnly = c["HttpOnly"].(bool)
 								//ck.SameSite = c["SameSite"].(SameSite)
