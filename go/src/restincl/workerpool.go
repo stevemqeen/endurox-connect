@@ -1200,10 +1200,16 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 			if svc.Format == "r" || svc.Format == "regexp" || svc.Parseheaders {
 				//Convert JSON to map interface object
 				var jsonObj interface{}
-				if err := json.Unmarshal([]byte(bufj.GetJSON()), &jsonObj); err != nil {
-					ac.TpLogError("Failed to unmarshal JSON: %v", err.Error())
+				decoder := json.NewDecoder(strings.NewReader(string(bufj.GetJSON())))
+				decoder.UseNumber()
+				if err := decoder.Decode(&jsonObj); err != nil {
+					ac.TpLogError("Failed to decode JSON: %v", err.Error()
 					return atmi.FAIL
 				}
+				/*if err := json.Unmarshal([]byte(bufj.GetJSON()), &jsonObj); err != nil {
+					ac.TpLogError("Failed to unmarshal JSON: %v", err.Error())
+					return atmi.FAIL
+				}*/
 				obj := jsonObj.(map[string]interface{})
 
 				//Add URL to JSON
