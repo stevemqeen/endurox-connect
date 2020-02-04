@@ -1212,7 +1212,7 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 				decoder := json.NewDecoder(strings.NewReader(string(bufj.GetJSON())))
 				decoder.UseNumber()
 				if err := decoder.Decode(&jsonObj); err != nil {
-					ac.TpLogError("Failed to decode JSON: %v", err.Error()
+					ac.TpLogError("Failed to decode JSON: %v", err.Error())
 					return atmi.FAIL
 				}
 				/*if err := json.Unmarshal([]byte(bufj.GetJSON()), &jsonObj); err != nil {
