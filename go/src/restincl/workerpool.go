@@ -1246,7 +1246,7 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 						}
 					}
 				}
-
+        
 				//Convert object to JSON
 				if barr, err2 := json.Marshal(obj); err2 == nil {
 					if err = bufj.SetJSON(barr); err != nil {
