@@ -11,7 +11,7 @@
  * AGPL or Mavimax's license for commercial use.
  * -----------------------------------------------------------------------------
  * AGPL license:
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Affero General Public License, version 3 as published
  * by the Free Software Foundation;
@@ -21,8 +21,8 @@
  * PARTICULAR PURPOSE. See the GNU Affero General Public License, version 3
  * for more details.
  *
- * You should have received a copy of the GNU Affero General Public License along 
- * with this program; if not, write to the Free Software Foundation, Inc., 
+ * You should have received a copy of the GNU Affero General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  * -----------------------------------------------------------------------------
@@ -33,10 +33,13 @@
 package main
 
 import (
+	"crypto/tls"
+	"exutil"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
 	//	"runtime"
 	u "ubftab"
 
@@ -133,6 +136,23 @@ var MCorrSvc = ""
 var MShutdown int = RUN_CONTINUE
 
 var MActiveConScan int = 5 //scan for new outgoing connections every 10 seconds
+
+var MLinger int = -1 //Set linger <0 is default OS setting
+
+var MNofreelist bool = false //Do not maintain connection pool, if set to true
+
+/* TLS Settings: */
+var MTls_enable bool                    //Is TLS enabled
+var MTls_skip_verify bool               //Ignore non verified connections (continue OK)
+var MTls_cert_file string               //Client/Server certificate
+var MTls_key_file string                //Key file
+var MTls_ca_roots string                //Semicolon seperated root certificates
+var MTls_client_auth tls.ClientAuthType //Is client auth required?
+var MTls_min_version uint16             //minum tls version
+
+//Resolved TLS settings
+var MTls_certificate tls.Certificate
+var MTls_config tls.Config
 
 //TCPGATE service
 //@param ac ATMI Context
@@ -467,8 +487,70 @@ func Init(ac *atmi.ATMICtx) int {
 					debug, err.Code(), err.Message())
 				return FAIL
 			}
+			break
+		case "linger":
+			MLinger, _ = buf.BGetInt(u.EX_CC_VALUE, occ)
+			ac.TpLogDebug("Got [%s] = [%d] ", fldName, MLinger)
+			break
+
+		case "tls_enable":
+			val, _ := buf.BGetInt16(u.EX_CC_VALUE, occ)
+			if 1 == val {
+				MTls_enable = true
+			}
+
+		case "tls_skip_verify":
+			val, _ := buf.BGetInt16(u.EX_CC_VALUE, occ)
+			if 1 == val {
+				MTls_skip_verify = true
+			}
+			break
+		case "tls_cert_file":
+			MTls_cert_file, _ = buf.BGetString(u.EX_CC_VALUE, occ)
+			break
+		case "tls_key_file":
+			MTls_key_file, _ = buf.BGetString(u.EX_CC_VALUE, occ)
+			break
+		case "tls_ca_roots":
+			MTls_ca_roots, _ = buf.BGetString(u.EX_CC_VALUE, occ)
+			break
+		case "tls_client_auth":
+
+			val, _ := buf.BGetInt16(u.EX_CC_VALUE, occ)
+			if 1 == val {
+				MTls_client_auth = tls.RequireAndVerifyClientCert
+			}
 
 			break
+		case "tls_min_version":
+
+			min_ver, _ := buf.BGetString(u.EX_CC_VALUE, occ)
+
+			switch min_ver {
+			case "TLS10":
+				MTls_min_version = tls.VersionTLS10
+			case "TLS11":
+				MTls_min_version = tls.VersionTLS11
+			case "TLS12":
+				MTls_min_version = tls.VersionTLS12
+			default:
+				ac.TpLogError("Invalid tls_min_version [%s], " +
+					"expected: TLS10,TLS11,TLS12")
+				return FAIL
+			}
+			break
+
+		//do not handle the connection pool (if always work by connection id...)
+		case "nofreelist":
+			tmp, _ := buf.BGetString(u.EX_CC_VALUE, occ)
+
+			ac.TpLogDebug("Got [%s] = [%s] ", fldName, tmp)
+
+			if "Y" == string(tmp[0]) || "y" == string(tmp[0]) {
+				MNofreelist = true
+			}
+			break
+
 		default:
 
 			break
@@ -602,6 +684,64 @@ func Init(ac *atmi.ATMICtx) int {
 		return FAIL
 	}
 
+	// print TLS config:
+	ac.TpLogInfo("TLS Enable: %v", MTls_enable)
+	ac.TpLogInfo("TLS Skip Verify: %v", MTls_skip_verify)
+	ac.TpLogInfo("TLS Key file: %v", MTls_key_file)
+	ac.TpLogInfo("TLS Cert file: %v", MTls_cert_file)
+	ac.TpLogInfo("TLS CA Roots: %v", MTls_ca_roots)
+	ac.TpLogInfo("TLS Client Auth: %v", MTls_client_auth)
+	ac.TpLogInfo("TLS Min version: %v", MTls_min_version)
+
+	//Load roots if any...
+	if MTls_ca_roots != "" && MTls_enable {
+		if err := exutil.LoadRootCAs(ac, MTls_ca_roots); nil != err {
+			ac.TpLogError("Failed to load CA roots: %s", err.Error())
+			return FAIL
+		}
+	}
+
+	if MTls_enable {
+
+		var certs []tls.Certificate
+
+		if MTls_key_file != "" && MTls_cert_file == "" ||
+			MTls_key_file == "" && MTls_cert_file != "" {
+			ac.TpLogError("TLS certificate must have settings: " +
+				"tls_cert_file and tls_key_file (one is missing)")
+			return FAIL
+		}
+
+		//Load certficate
+		if MTls_key_file != "" {
+
+			var err error
+			MTls_certificate, err = tls.LoadX509KeyPair(MTls_cert_file, MTls_key_file)
+			if err != nil {
+				ac.TpLogError("Failed to load TLS certificate: %s", err.Error())
+				return FAIL
+			}
+
+			certs = append(certs, MTls_certificate)
+		}
+
+		if CON_TYPE_PASSIVE == MType && MTls_key_file == "" {
+			ac.TpLogError("ERROR: For passive (server) connection role " +
+				"certificate is mandatory (tls_cert_file/tls_key_file)")
+			return FAIL
+		}
+
+		//Prepare config object
+		MTls_config = tls.Config{Certificates: certs,
+			RootCAs:            exutil.MRootCAs,
+			ClientCAs:          exutil.MRootCAs,
+			InsecureSkipVerify: MTls_skip_verify,
+			ClientAuth:         MTls_client_auth,
+			MinVersion:         MTls_min_version}
+
+		ac.TpLogInfo("TLS Configured")
+	}
+
 	MZeroStopwatch.Reset()
 	MStatusRefreshStopWatch.Reset()
 
@@ -641,6 +781,8 @@ func Init(ac *atmi.ATMICtx) int {
 		ac.TpLogInfo("Starting connection listener...")
 		go PassiveConnectionListener()
 	}
+
+	ac.TpLogWarn("Startup finished")
 
 	return SUCCEED
 }
@@ -687,4 +829,5 @@ func main() {
 		}
 	}
 }
+
 /* vim: set ts=4 sw=4 et smartindent: */

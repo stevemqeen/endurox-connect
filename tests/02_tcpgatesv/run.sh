@@ -4,6 +4,11 @@
 # @(#) Test 02 - TCP Gate tests
 #
 
+#
+# Load system settings...
+#
+source ~/ndrx_home
+
 # set limit, for osx have issues with ssh defaults
 ulimit -n 50000
 
@@ -15,6 +20,13 @@ cd runtime
 
 
 NUMCALL=100
+
+NUMCALL40=40
+archs=`uname -m`
+if [ "X$archs" == "Xarmv7l" ]; then
+	# have some memory issues on rpi
+	NUMCALL40=10
+fi
 
 #
 # Generic exit function
@@ -36,6 +48,10 @@ xadmin provision -d -vaddubf=test.fd
 
 cd conf
 . settest1
+
+# create test certs...
+./gencert.sh
+
 # Fix some config (logging for testcl to file)
 # - moved to tcpgate config...
 #echo "[@debug]" >> app.ini
@@ -52,6 +68,7 @@ echo "NUMCALL: $NUMCALL"
 
 cd ..
 
+export TEST_HOSTNAME=`hostname`
 # Start the system
 xadmin start -y
 
@@ -59,9 +76,32 @@ xadmin start -y
 sleep 60
 
 ################################################################################
+echo " >>> Run TLS test..."
+################################################################################
+NROFCALLS=$NUMCALL
+COMMAND="corr"
+
+# Flush connections
+# This time will start from Passive side...
+testcl $COMMAND $NROFCALLS TCP_P_TLS_A
+RET=$?
+
+if [[ $RET != 0 ]]; then
+        echo "testcl $COMMAND $NROFCALLS TCP_P_TLS_P failed"
+        go_out 54
+fi
+
+################################################################################
 echo ">>> Running sequence tests"
 ################################################################################
 NROFCALLS=40000
+
+# seems like for osx this causes too high usage
+# i.e. too mahy wakeups
+if [ "X`uname`" == "XDarwin" ]; then
+	NROFCALLS=1000
+fi
+
 COMMAND="seq"
 testcl $COMMAND $NROFCALLS TCP_P_SEQ_A
 RET=$?
@@ -313,7 +353,7 @@ echo ">>> Have some test where we overload the channel - i.e."
 # i.e. wait the connection from queue...
 ################################################################################
 # Number of calls depends on internal modulus, now 40... over the ascii table from A
-NROFCALLS=40
+NROFCALLS=$NUMCALL40
 COMMAND="corrsim"
 
 testcl $COMMAND $NROFCALLS TCP_P_ASYNC_P
@@ -328,7 +368,7 @@ fi
 echo ">>> have some batch callers to non persistant connections they all should complete ok."
 ################################################################################
 # Number of calls depends on internal modulus, now 40... over the ascii table from A
-NROFCALLS=40
+NROFCALLS=$NUMCALL40
 COMMAND="corrsim"
 
 testcl $COMMAND $NROFCALLS TCP_NP_A
@@ -343,7 +383,7 @@ fi
 echo ">>> echo same test for sync mode"
 ################################################################################
 # Number of calls depends on internal modulus, now 40... over the ascii table from A
-NROFCALLS=40
+NROFCALLS=$NUMCALL40
 COMMAND="corrsim"
 
 #testcl $COMMAND $NROFCALLS TCP_P_SYNC_A

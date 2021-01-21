@@ -55,9 +55,10 @@ all: check_asciidoc $(DOCS)
 #
 %.8: %.adoc
 	a2x -D. --format=manpage $<
+	a2x -D. --format=xhtml $<
 	
 clean:
-	rm -f *.8
+	rm -f *.8 *.html *.css
 
 .PHONY: clean all
 

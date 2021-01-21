@@ -32,8 +32,8 @@
 ##
 
 cmake_minimum_required (VERSION 2.6) 
-project (ENDUROXCONNECT) 
-set(VERSION "2.4.20")
+project (ENDUROX-CONNECT) 
+set(VERSION "2.4.30")
 set(PROJ_NAME "Enduro/X Connectivity Module")
 set(RELEASE "1")
 
@@ -125,8 +125,38 @@ if(A2X_EXECUTABLE)
 	# Install manpages (if any
 	install (FILES
 		../doc/manpage/restincl.8
+		../doc/manpage/restousv.8
 		../doc/manpage/tcpgatesv.8
 		DESTINATION share/man/man8)
+
+	install (FILES
+		../doc/manpage/tcpgatesv.html
+		../doc/manpage/restincl.html
+		../doc/manpage/restoutsv.html
+		DESTINATION share/endurox-connect/doc/html/manpage)
+
+	install (FILES
+  		../doc/manpage/docbook-xsl.css
+		DESTINATION share/endurox-connect/doc/html/manpage
+  		OPTIONAL)
+
+	install (FILES
+                ../doc/restinout_user_guide.html
+		../doc/tcpgatesv_user_guide.html
+		../doc/nonpers_sync_ex_to_net.png
+		../doc/nonpers_sync_net_to_ex.png
+		../doc/pers_async_ex_to_net_wo_corr.png
+		../doc/pers_async_net_to_ex_w_corr.png
+		../doc/pers_async_net_to_ex_wo_corr.png
+		../doc/pers_sync_ex_to_net_connid.png
+		../doc/pers_sync_net_to_ex.png
+		../doc/restinout_tutor_1.png
+                DESTINATION share/endurox-connect/doc/html/guides)
+
+	install (FILES
+  		../doc/docbook-xsl.css
+		DESTINATION share/endurox-connect/doc/html/guides
+  		OPTIONAL)
 endif()
 	
 ################################################################################
@@ -162,51 +192,73 @@ elseif (EXISTS /etc/os-release)
         LSB_RELEASE_OUTPUT_OS)
         string(REPLACE " " "_" LSB_RELEASE_OUTPUT_OS ${LSB_RELEASE_OUTPUT_OS})
 
-        execute_process(COMMAND bash -c "cat /etc/os-release | egrep '^VERSION=' | cut -d '\"' -f2"
+        # fixes for CentOs 7.1810, having something like "7 (Core)" in output.
+        execute_process(COMMAND bash -c "cat /etc/os-release | egrep '^VERSION=' | cut -d '=' -f2 | cut -d ' ' -f1 | cut -d '\"' -f2"
                 OUTPUT_VARIABLE _TMP_LSB_RELEASE_OUTPUT_VER
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
         string(REPLACE "." "_" LSB_RELEASE_OUTPUT_VER ${_TMP_LSB_RELEASE_OUTPUT_VER})
         #string(REGEX MATCH "^[0-9]+" LSB_RELEASE_OUTPUT_VER ${_TMP_LSB_RELEASE_OUTPUT_VER})
 else ()
-        #set(LSB_RELEASE_OUTPUT_OS "unknown")
-        #set(LSB_RELEASE_OUTPUT_VER "0")
-	set(LSB_RELEASE_OUTPUT_OS ${CMAKE_OS_NAME})
-	string(REPLACE "." "_" _TMP_LSB_RELEASE_OUTPUT_VER ${CMAKE_SYSTEM_VERSION})
-	string(REPLACE "-" "_" LSB_RELEASE_OUTPUT_VER ${_TMP_LSB_RELEASE_OUTPUT_VER})
+        set(LSB_RELEASE_OUTPUT_OS ${CMAKE_OS_NAME})
+
+        string(REPLACE "." "_" _TMP_LSB_RELEASE_OUTPUT_VER ${CMAKE_SYSTEM_VERSION})
+        string(REPLACE "-" "_" LSB_RELEASE_OUTPUT_VER ${_TMP_LSB_RELEASE_OUTPUT_VER})
+	
+	# If it is AIX, then we can extract version from uname
+	if(${CMAKE_OS_NAME} STREQUAL "AIX")
+		execute_process(COMMAND uname -v
+			OUTPUT_VARIABLE _TMP_OS_MAJOR_VER OUTPUT_STRIP_TRAILING_WHITESPACE)
+		execute_process(COMMAND uname -r
+			OUTPUT_VARIABLE _TMP_OS_MINOR_VER OUTPUT_STRIP_TRAILING_WHITESPACE)
+		set(LSB_RELEASE_OUTPUT_VER ${_TMP_OS_MAJOR_VER}_${_TMP_OS_MINOR_VER})
+	endif()
+	
 endif()
 
-message("CPack:Debug: LSB_RELEASE OS  = ${LSB_RELEASE_OUTPUT_OS}")
-message("CPack:Debug: LSB_RELEASE VER = ${LSB_RELEASE_OUTPUT_VER}")
+message("LSB_RELEASE OS  = ${LSB_RELEASE_OUTPUT_OS}")
+message("LSB_RELEASE VER = ${LSB_RELEASE_OUTPUT_VER}")
+set(EX_LSB_RELEASE_VER ${LSB_RELEASE_OUTPUT_VER})
 
 
 # Support only for Linux
-MESSAGE( "CPack:Debug: CMAKE_SYSTEM_NAME: " ${CMAKE_SYSTEM_NAME} )
-MESSAGE( "CPack:Debug: CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
+MESSAGE( "CPack:Debug: CMAKE_SYSTEM_NAME = " ${CMAKE_SYSTEM_NAME} )
+MESSAGE( "CPack:Debug: CMAKE_SYSTEM_PROCESSOR = " ${CMAKE_SYSTEM_PROCESSOR} )
+set(CPACK_MONOLITHIC_INSTALL 1)
 
 find_program(RPMPROG "rpmbuild")
-find_program(APTPROG "apt")
+find_program(APTPROG "dpkg")
 
-set(CPACK_GENERATOR "TGZ")
-if(RPMPROG)
-        message("Outputting RPM")
-        set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
-endif()
-
-if(APTPROG)
-        message("Outputting DEB")
-        set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
-endif()
-
-
-# have some issues with folders
+# avoid file /usr/share/man from install of endurox-3.5.1-1.x86_64 conflicts with file from package filesystem-3.2-21.el7.x86_64
+# problems...
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/share/man
 		/usr/share/man/man3
 		/usr/share/man/man5
 		/usr/share/man/man8
+		/usr/share/java
 		/usr/lib64/pkgconfig
 		/usr/lib/pkgconfig)
+message("Excl: ${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}")
 
-set(CPACK_MONOLITHIC_INSTALL 1)
+set(CPACK_GENERATOR "TGZ")
+if(RPMPROG)
+        message("Outputting RPM")
+	set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
+endif()
+
+if(APTPROG)
+        message("Outputting DEB")
+	set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
+endif()
+
+#
+# Fix arch for AIX
+#
+IF(CMAKE_SYSTEM_PROCESSOR MATCHES "^powerpc")
+	set(CPACK_RPM_PACKAGE_ARCHITECTURE "ppc")
+ENDIF()
+
+message("Generator: ${CPACK_GENERATOR}")
+
 set(CPACK_PACKAGE_CONTACT "madars.vitolins@gmail.com")
 set(CPACK_PACKAGE_VERSION ${VERSION})
 #set(CPACK_DEBIAN_PACKAGE_DEPENDS "endurox")
@@ -218,11 +270,11 @@ message("CPack:Debug: CPACK_PACKAGE_FILE_NAME = ${CPACK_PACKAGE_FILE_NAME}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Enduro/X Connectivity Module")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION  ${CPACK_PACKAGE_DESCRIPTION})
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
+set(CPACK_RPM_PACKAGE_AUTOREQ "0")
 #set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/Debian/postinst")
 
 include(CPack)
 ################################################################################
-
 
 
 # vim: set ts=4 sw=4 et smartindent:

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
 	"ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
@@ -66,6 +68,24 @@ func INMAND(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
 
 	if errU != nil {
 		ac.TpLogError("Missing EX_IF_REQFORMV")
+		ret = FAIL
+		return
+	}
+
+	//Check also some mandatory fields
+	//Feature #509
+	//EX_IF_METHOD now must be present
+	method, errU := ub.BGetString(ubftab.EX_IF_METHOD, 0)
+
+	if nil != errU {
+		ac.TpLogError("TESTERROR! Failed to get EX_IF_METHOD: %s", errU.Error())
+		ret = FAIL
+		return
+	}
+
+	if method != "GET" && method != "POST" {
+		ac.TpLogError("TESTERROR Test error method expected GET or POST, "+
+			"but recieved: [%s]", method)
 		ret = FAIL
 		return
 	}
@@ -328,4 +348,60 @@ func REQPARAMS(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
 
 	ac.TpReturn(atmi.TPSUCCESS, 0, ub, 0)
 
+}
+
+//Just receive some request
+//Set the tpurcode and in case of data 3, set error response too
+func REQERRCODES(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
+
+	ret := SUCCEED
+	urcode := 0
+	//Get UBF Handler
+	ub, _ := ac.CastToUBF(&svc.Data)
+	ac.TpLogSetReqFile(ub, "", "")
+
+	//Return to the caller
+	defer func() {
+		if SUCCEED == ret {
+			ac.TpReturn(atmi.TPSUCCESS, int64(urcode), ub, 0)
+		} else {
+			ac.TpReturn(atmi.TPFAIL, int64(urcode), ub, 0)
+		}
+	}()
+
+	//Print the buffer to stdout
+	ub.TpLogPrintUBF(atmi.LOG_DEBUG, "Incoming request (REQERRCODES):")
+
+	data, _ := ub.BGetString(ubftab.EX_IF_REQDATA, 0)
+
+	urcode, _ = strconv.Atoi(data)
+
+	ac.TpLogInfo("Got data: %s - %d", data, urcode)
+
+	if urcode == 3 {
+		ret = FAIL
+	}
+
+}
+
+//Filter & prepare body with reporting the actual
+//Response
+func RSPERRFILTER(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
+
+	//Get UBF Handler
+	ub, _ := ac.CastToUBF(&svc.Data)
+
+	ac.TpLogSetReqFile(ub, "", "")
+
+	errCode, _ := ub.BGetInt(ubftab.EX_IF_ECODE, 0)
+	errMsg, _ := ub.BGetString(ubftab.EX_IF_EMSG, 0)
+	urCode, _ := ub.BGetInt(ubftab.EX_IF_TPURCODE, 0)
+	src, _ := ub.BGetString(ubftab.EX_IF_ERRSRC, 0)
+
+	rspmsg := fmt.Sprintf("ERR-URCODE-%d-%d-%s-%s", errCode, urCode, src, errMsg)
+
+	ub.BChg(ubftab.EX_IF_RSPDATA, 0, rspmsg)
+	ub.BChg(ubftab.EX_NETRCODE, 0, "200")
+
+	ac.TpReturn(atmi.TPSUCCESS, 0, ub, 0)
 }

@@ -22,3 +22,8 @@ Releases:
 2.4.16 - Feature #377 - ext mode (in/out filters)
 2.4.18 - Bug #461
 2.4.20 - Updates on ext mode processing now body is loaded into EX_IF_REQDATA/EX_IF_RSPDATA fields
+2.4.22 - Feature #509 - added EX_IF_METHOD for ext (web method post/get, etc..)
+2.4.24 - Feature #531 - Optmizations (linger flag, less data array compies, quicker copies)
+2.4.26 - Feature #596 - tls support in tcpgatesv
+2.4.28 - Bug #607 - tcpgatesv if invalid tls_ca_roots is given, no error is returned
+2.4.30 - Feature #606 - file upload

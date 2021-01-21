@@ -81,6 +81,12 @@ const (
 	ERRORS_EXT       = 7 //External mode errors, direct UBF error codes, services
 )
 
+const (
+	ERRSRC_FINMAN  = "F" //Input mandatory filter failed
+	ERRSRC_SERVICE = "S" //Error source is target service
+	ERRSRC_RESTIN  = "R" //Error source is rest-in internal error
+)
+
 //Conversion types resolved
 const (
 	CONV_JSON2UBF  = 1
@@ -165,9 +171,11 @@ type ServiceMap struct {
 	// Parsing request headers/Cookies
 	Parseheaders    bool   `json:"parseheaders"`      // Default false
 	Parsecookies    bool   `json:"parsecookies"`      // Default false
+	Parseform       bool   `json:"parseform"`         // Parse form data and load into UBF
+	Fileupload      bool   `json:"fileupload"`        // This url end-point is used for file upload
+	Tempdir         string `json:"tempdir"`           // Temporary folder where to store uploaded files
 	JsonCookieField string `json:"json_cookie_field"` //Field for Cookie object in case of CONV_JSON
 	JsonHeaderField string `json:"json_header_field"` //Field for Headers in case of CONV_JSON
-	Parseform    bool `json:"parseform"`    // Parse form data and load into UBF
 
 	//For ext mode:
 	Finman     string `json:"finman"` // Mandatory incoming services
@@ -242,6 +250,8 @@ var M_ac *atmi.ATMICtx //Mainly shared for logging....
  *   which later are used by real time ServeHTTP()  to resolve services/urls...
  */
 var M_handler RegexpHandler //Global HTTP call handler which contains regexp and simple handlers
+
+var M_cctag string //CCTAG from env
 
 //HandleFunc Can be used to add regexp or exact match URLs which uses dispathRequest()
 // to handle request
@@ -444,7 +454,7 @@ func parseHTTPErrorMap(ac *atmi.ATMICtx, svc *ServiceMap) error {
 func printSvcSummary(ac *atmi.ATMICtx, svc *ServiceMap) {
 	ac.TpLogWarn("Service: %s, Url: %s, Async mode: %t, Log request svc: [%s], "+
 		"Errors:%d (%s), Async echo %t, "+
-		"Streaming mode: %t, " +
+		"Streaming mode: %t, "+
 		"Filters: inman:%s/inopt:%s/inerr:%s/outman:%s/outopt:%s/outerr:%s",
 		svc.Svc,
 		svc.Url,
@@ -455,6 +465,8 @@ func printSvcSummary(ac *atmi.ATMICtx, svc *ServiceMap) {
 		svc.Asyncecho,
 		svc.Stream,
 		svc.Finman, svc.Finopt, svc.Finerr, svc.Foutman, svc.Foutopt, svc.Fouterr)
+
+	ac.TpLogWarn("fileupload:%t tempdir:[%s]", svc.Fileupload, svc.Tempdir)
 }
 
 //Validate external service definitions
@@ -534,6 +546,21 @@ func validateExtService(ac *atmi.ATMICtx, svc *ServiceMap) error {
 			return errors.New(fmt.Sprintf("`fouterr' not suitable for conv %s",
 				svc.Conv))
 		}
+
+		if svc.Fileupload {
+			return errors.New(fmt.Sprintf("`fileupload' is valid only for ext conv (cur %s)",
+				svc.Conv))
+		}
+
+		if svc.Parseform {
+			return errors.New(fmt.Sprintf("`parseform' is valid only for ext conv (cur %s",
+				svc.Conv))
+		}
+
+	}
+
+	if svc.Fileupload && svc.Parseform {
+		return errors.New(fmt.Sprintf("`fileupload' or `parseform' must be used exclusively"))
 	}
 
 	return nil
@@ -573,7 +600,8 @@ func appinit(ac *atmi.ATMICtx) error {
 	}
 
 	buf.BChg(u.EX_CC_CMD, 0, "g")
-	buf.BChg(u.EX_CC_LOOKUPSECTION, 0, fmt.Sprintf("%s/%s", progsection, os.Getenv("NDRX_CCTAG")))
+	M_cctag = os.Getenv("NDRX_CCTAG")
+	buf.BChg(u.EX_CC_LOOKUPSECTION, 0, fmt.Sprintf("%s/%s", progsection, M_cctag))
 
 	if _, err := ac.TpCall("@CCONF", buf, 0); nil != err {
 		ac.TpLog(atmi.LOG_ERROR, "ATMI Error %d:[%s]\n", err.Code(), err.Message())
@@ -759,6 +787,11 @@ func appinit(ac *atmi.ATMICtx) error {
 					ac.TpLogInfo("Static file server [%s] OK", tmp.StaticDir)
 				}
 
+			}
+
+			//Default temporary folder
+			if "" == tmp.Tempdir {
+				tmp.Tempdir = os.TempDir()
 			}
 
 			//Validate view settings (if any)

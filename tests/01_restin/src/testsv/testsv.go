@@ -10,11 +10,6 @@ import (
 	atmi "github.com/endurox-dev/endurox-go"
 )
 
-const (
-	SUCCEED = 0
-	FAIL    = -1
-)
-
 //Will set the trace file
 func GETFILE(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
 
@@ -93,8 +88,8 @@ func LONGOP(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
 
 	//Print the buffer to stdout
 	ub.TpLogPrintUBF(atmi.LOG_DEBUG, "Incoming request:")
-	ac.TpLogWarn("Sleeping 4 sec...")
-	time.Sleep(4000 * time.Millisecond)
+	ac.TpLogWarn("Sleeping 10 sec...")
+	time.Sleep(10000 * time.Millisecond)
 
 	//Resize buffer, to have some more space
 	if err := ub.TpRealloc(1024); err != nil {
@@ -435,6 +430,26 @@ func Init(ac *atmi.ATMICtx) int {
 	}
 
 	if err := ac.TpAdvertise("REQPARAMS", "REQPARAMS", REQPARAMS); err != nil {
+		fmt.Println(err)
+		return atmi.FAIL
+	}
+
+	if err := ac.TpAdvertise("FILEUPLOAD", "FILEUPLOAD", FILEUPLOAD); err != nil {
+		fmt.Println(err)
+		return atmi.FAIL
+	}
+
+	if err := ac.TpAdvertise("UPLDERR", "UPLDERR", UPLDERR); err != nil {
+		fmt.Println(err)
+		return atmi.FAIL
+	}
+
+	if err := ac.TpAdvertise("REQERRCODES", "REQERRCODES", REQERRCODES); err != nil {
+		fmt.Println(err)
+		return atmi.FAIL
+	}
+
+	if err := ac.TpAdvertise("RSPERRFILTER", "RSPERRFILTER", RSPERRFILTER); err != nil {
 		fmt.Println(err)
 		return atmi.FAIL
 	}

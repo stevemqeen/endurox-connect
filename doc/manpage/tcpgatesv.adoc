@@ -457,13 +457,12 @@ accept the max number of connections, set by 'max_connections' parameter.
 The default is *P* - Passive.
 
 *ip* = 'IP_ADDRESS'::
-In case of active mode ('type' = *A*), this is ip address to connect
-to remote server. In case of passive mode ('type' = *P*), this indicates
-the binding ip address - on which *tcpgatesv* binary shall listen for
-incoming connections.
-The default is *0.0.0.0*.
+In case of active mode ('type' = *A*), this is ip address or network host name
+of the remote server. In case of passive mode ('type' = *P*), this indicates
+the binding ip address (or binding network host name) - on which *tcpgatesv* 
+binary shall listen for incoming connections. The default is *0.0.0.0*.
 
-*port* = 'TPC_PORT_NUMBER'::
+*port* = 'TCP_PORT_NUMBER'::
 In case of active mode ('type' = *A*), this is port number to connect to.
 In case of passive mode ('type' = *P*), this is port number to listen
 on for incoming connections.
@@ -641,6 +640,18 @@ The default value for this field is *unset* (i.e. empty parameter - not used).
 Enduro/X standard debug string, see *ndrxdebug.conf(5)* manpage. The sample value
 could look like:
 
+--------------------------------------------------------------------------------
+
+[@tcpgate]
+...
+debug=ndrx=5 ubf=0 tp=5 file=/tmp/tcpgatesv.log
+
+--------------------------------------------------------------------------------
+
+Meaning that Enduro/X internal ATMI level logging ('ndrx' setting) is set to 5 - 
+debug, and user logging 'tp' (*tcpgatesv* binary) logging also is set to 5 - debug.
+Output file will be set to '/tmp/tcpgatesv.log'. UBF logging is set to none.
+
 *seqin* = 'SEQIN'::
 If set to *1* dispatch incoming messages from network to XATMI service 
 in one thread mode. Thus ensuring the order of the messages to be
@@ -656,18 +667,53 @@ are used, otherwise two competing queues can be create and fifo order will be
 disrupted. The default value is *0* - disabled, meaning that outgoing messages
 are processed in out of order manner (by multiple concurrent threads).
 
---------------------------------------------------------------------------------
+*linger* = 'LINGER_SECONDS'::
+When socket is shut down, this is number of seconds to wait for unsent or unacknowledged
+to be processed on connection close. If set to *0*, then operating system discards
+any such data on shutdown. If set above (>) *0*, this is number of seconds to
+wait for data to be processed before discarding. If set less (<) than *0*, then
+operating system default policy is used. Default is *-1*. This setting is not
+effective if *tls_enable* is set to *1*.
 
-[@tcpgate]
-...
-debug=ndrx=5 ubf=0 tp=5 file=/tmp/tcpgatesv.log
+*nofreelist* = 'Yy'::
+If set to *Y* or *y*, then free list of connection is not maintained. This means
+that *TCPGATE* service calls with out connection identifier *EX_NETCONNID* will
+be rejected as connection not found. This may be used in case if the protocol
+always uses connection id - thus avoid un-needed synchronization of free
+connection list.
 
---------------------------------------------------------------------------------
+*tls_enable* = 'TLS_SETTING'::
+If set to *1*, Transport Layer Security Mode is enabled. Default is *0* - not
+enabled.
 
-Meaning that Enduro/X internal ATMI level logging ('ndrx' setting) is set to 5 - 
-debug, and user logging 'tp' (*tcpgatesv* binary) logging also is set to 5 - debug.
-Output file will be set to '/tmp/tcpgatesv.log'. UBF logging is set to none.
+*tls_skip_verify* = 'TLS_VERIFY_SETTING'::
+In TLS mode, if set to *1*, then client (active tcpgates) will ignore invalid 
+server certificate. The default is *0* - server must be verified.
 
+*tls_cert_file* = 'TLS_CERT_FILENAME'::
+This is peer certificate/public key filename for TLS session. For passive 
+tcpgatesv roles (server), this is mandatory setting. For active (client) 
+tcpgatesv roles, this is optional. Certificate file must be in X.509 format.
+
+*tls_key_file* = 'TLS_KEY_FILENAME'::
+This is peer certificate private key filename for TLS session. For passive 
+tcpgatesv roles (server), this is mandatory setting. For active (client) 
+tcpgatesv roles, this is optional. Key file must be in X.509 format.
+
+*tls_ca_roots* = 'TLS_CA_ROOTS_FILES'::
+This list of Root Certificate Authority certificate chains, used for client/server
+certificate validation. Certificates must be in X.509 format. This is optional,
+if not specified system CA roots are used for certificate validation.
+
+*tls_client_auth* = 'TLS_CLIENT_AUTH_SETTING'::
+If value is set to *1*, passive (server) tcpgatesv will validate incoming client
+certificate against CA roots, if client certificate is invalid, connection
+will be rejected/closed. Default value is *0* - do not validate client certificate.
+
+*tls_min_version* = 'TLS_MIN_VERSION_SETTING'::
+For TLS mode this indicates minimum TLS protocol version used for sessions.
+Valid values are *TLS10* - TLS 1.0, *TLS11* - TLS 1.1 and *TLS12* - TLS 1.2.
+Default value is not specified, so peers will negotiate the protocol.
 
 EXIT STATUS
 -----------
@@ -682,9 +728,50 @@ EXAMPLE
 
 To see the usage different usage settings, see *tests/02_tcpgatesv/runtime/conf/tcpgate.ini'*.
 
+Typical configuration would look like:
+
+--------------------------------------------------------------------------------
+[@tcpgate]
+
+gateway=TESTSVC
+incoming_svc=INCSVC
+type=P
+framing=ll
+periodic_zero_msg=60
+ip=0.0.0.0
+port=9999
+max_connections=10
+
+--------------------------------------------------------------------------------
+
+
 BUGS
 ----
 Report bugs to support@mavimax.com
+
+In case if running software for MacOS, it might be required to set:
+
+--------------------------------------------------------------------------------
+
+# defaults write NSGlobalDomain NSAppSleepDisabled -bool YES
+
+--------------------------------------------------------------------------------
+
+Otherwise tcpgatesv binary might receive Go panics. Otherwise in high processing
+intensity, system warns user in dmesg with:
+
+--------------------------------------------------------------------------------
+
+process tpcgatesv[43069] caught causing excessive wakeups. Observed wakeups rate...
+
+--------------------------------------------------------------------------------
+
+And in this result, seems like Go binary is interrupted by OS, which causes Go
+binary to corrupt its internal scheduler.
+
+Also problems is found with MacOS only when background processes (with out TTY)
+are running. If user logins in shell and executes the tcpgatesv tests, then
+problems does not appear.
 
 SEE ALSO
 --------
