@@ -96,6 +96,19 @@ func generateFileFromBase64(fileContentsB64 string, tmpFileName string, w http.R
 	os.Remove(tmpFileName)
 }
 
+// Generates a file from a path and writes it to response
+func generateFileFromPath(filePath string, w http.ResponseWriter) []byte {
+	// Read file
+	fileContents, err := os.ReadFile(filePath)
+	dec64 := base64.StdEncoding.EncodeToString([]byte(fileContents)) // We send files as base64, so we need to encode
+
+	if err != nil {
+		panic(err)
+	}
+
+	return []byte(dec64)
+}
+
 //Generate the headers for UBF mode and for EXT mode
 //Return content type if available
 func genRspHeaders(ac *atmi.ATMICtx, bufu *atmi.TypedUBF, w http.ResponseWriter,
@@ -379,8 +392,13 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 			var errU atmi.UBFError
 
 			rsp, errU = bufu.BGetByteArr(ubftab.EX_IF_RSPDATA, 0)
-			if svc.Stream {
-				generateFileFromBase64(string(rsp), "./tempfilename", w)
+
+			if bufu.BPres(ubftab.EX_IF_RSPFILEACTION, 0) {
+				rsp = generateFileFromPath(string(rsp))
+			} else {
+				if svc.Stream {
+					generateFileFromBase64(string(rsp), "./tempfilename", w)
+				}
 			}
 
 			if nil != errU {
