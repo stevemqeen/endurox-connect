@@ -97,7 +97,7 @@ func generateFileFromBase64(fileContentsB64 string, tmpFileName string, w http.R
 }
 
 // Generates a file from a path and writes it to response
-func generateFileFromPath(filePath string, w http.ResponseWriter) []byte {
+func generateFileFromPath(filePath string) []byte {
 	// Read file
 	fileContents, err := os.ReadFile(filePath)
 	dec64 := base64.StdEncoding.EncodeToString([]byte(fileContents)) // We send files as base64, so we need to encode
