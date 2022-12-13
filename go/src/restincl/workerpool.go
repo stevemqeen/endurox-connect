@@ -70,6 +70,10 @@ var M_freechan chan int //List of free channels submitted by wokers
 
 var M_ctxs []*atmi.ATMICtx //List of contexts
 
+// Has leading circumflex, but not trailing dollar, because we need first value in X-Forwarded-For header and do not need port number in RemoteAddr.
+// Groups order matters (start with longer numbers, otherwise trailing digits are lost).
+var M_ipv4AddressRx, _ = regexp.Compile("^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])")
+
 // Generates a file form a Base64 string and writes it to response
 func generateFileFromBase64(fileContentsB64 string, tmpFileName string, w http.ResponseWriter) {
 	decodedFileContent, err := base64.StdEncoding.DecodeString(fileContentsB64)
@@ -865,6 +869,10 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 func parseHeaders(ac *atmi.ATMICtx, svc *ServiceMap, req *http.Request,
 	bufu *atmi.TypedUBF) atmi.UBFError {
 
+	if errU := bufu.BAdd(ubftab.EX_NETTHEIRIP, getRemoteAddr(ac, req)); nil != errU {
+		return errU
+	}
+
 	// Add header data to UBF fields
 	if svc.Parseheaders {
 		for k, v := range req.Header {
@@ -898,7 +906,23 @@ func parseHeaders(ac *atmi.ATMICtx, svc *ServiceMap, req *http.Request,
 	return nil
 }
 
-//Common func for parsing query parameters and loading them into UBF buffer
+// Returns IPv4 address of client performin request, if available. Empty string otherwise.
+func getRemoteAddr(ac *atmi.ATMICtx, req *http.Request) string {
+	// Add 'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' to Nginx site config to have this header (disabled by default).
+	// Header name casing does not matter.
+	fwdAddress := req.Header.Get("X-Forwarded-For")
+	if fwdAddress != "" {
+		ac.TpLogDebug("Client address connection [%s], forwarded [%s]", req.RemoteAddr, fwdAddress)
+		// First one is the most external. Separate by ", ", if more than one.
+		return M_ipv4AddressRx.FindString(fwdAddress)
+	}
+
+	ac.TpLogDebug("Client address connection [%s]", req.RemoteAddr)
+	// IP:port, we return only IP
+	return M_ipv4AddressRx.FindString(req.RemoteAddr)
+}
+
+// Common func for parsing query parameters and loading them into UBF buffer
 func parseQuery(ac *atmi.ATMICtx, svc *ServiceMap, req *http.Request,
 	bufu *atmi.TypedUBF) atmi.UBFError {
 
@@ -1250,6 +1274,8 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 
 				// Add header data to UBF fields
 				if svc.Parseheaders {
+					obj["RemoteAddr"] = getRemoteAddr(ac, req)
+
 					if svc.JsonHeaderField != "" {
 						obj[svc.JsonHeaderField] = req.Header
 					} else {
