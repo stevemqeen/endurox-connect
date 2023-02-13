@@ -713,6 +713,10 @@ func genRsp(ac *atmi.ATMICtx, buf atmi.TypedBuffer, svc *ServiceMap,
 						header = obj["Header"].(map[string]interface{})
 						delete(obj, "Header")
 					}
+
+					// Remove address field from response JSON.
+					delete(obj, "RemoteAddr")
+
 					//Add headers to ResponseWriter
 					for k, v := range header {
 						for _, val := range v.([]interface{}) {
