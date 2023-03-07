@@ -879,19 +879,20 @@ func parseHeaders(ac *atmi.ATMICtx, svc *ServiceMap, req *http.Request,
 
 	// Add header data to UBF fields
 	if svc.Parseheaders {
-		for k, v := range req.Header {
-			ac.TpLogDebug("Header field %s, Value %+v", k, v)
-			hv := fmt.Sprintf("%s", v)
-			if errU := bufu.BAdd(ubftab.EX_IF_REQHN, k); nil != errU {
-				return errU
+		for fld, hdr := range req.Header {
+			/* Bug #800 had header values with [] */
+			for _, val := range hdr {
+				ac.TpLogDebug("Header field %s, Value %s", fld, val)
+				if errU := bufu.BAdd(ubftab.EX_IF_REQHN, fld); nil != errU {
+					return errU
+				}
+				if errU := bufu.BAdd(ubftab.EX_IF_REQHV, val); nil != errU {
+					return errU
+				}
 			}
-
-			if errU := bufu.BAdd(ubftab.EX_IF_REQHV, hv); nil != errU {
-				return errU
-			}
-			// Add Cookies data to UBF
 		}
 
+		// Add Cookies data to UBF
 		if svc.Parsecookies {
 			for _, cookie := range req.Cookies() {
 				// Incoming request have Name and Value
