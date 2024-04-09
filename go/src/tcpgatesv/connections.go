@@ -691,6 +691,7 @@ func HandleConnection(con *ExCon) {
 	//Remove from channel
 	MarkConnAsBusy(ac, con, false)
 
+	ac.TpTerm()
 }
 
 //This will setup connection
