@@ -1266,7 +1266,11 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 					ac.TpLogError("Failed to unmarshal JSON: %v", err.Error())
 					return atmi.FAIL
 				}*/
-				obj := jsonObj.(map[string]interface{})
+				obj, ok := jsonObj.(map[string]interface{})
+				if !ok {
+					ac.TpLogError("Expected JSON object, but got %T", jsonObj)
+					return atmi.FAIL
+				}
 
 				//Add URL to JSON
 				if svc.Format == "r" || svc.Format == "regexp" {
