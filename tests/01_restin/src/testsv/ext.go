@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"ubftab"
+
+	"github.com/stevemqeen/endurox-connect/tests/01_restin/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

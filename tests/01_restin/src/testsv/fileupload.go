@@ -6,7 +6,8 @@ package main
 import (
 	"os/exec"
 	"strings"
-	u "ubftab"
+
+	u "github.com/stevemqeen/endurox-connect/tests/01_restin/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

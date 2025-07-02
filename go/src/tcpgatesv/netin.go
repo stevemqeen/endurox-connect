@@ -33,7 +33,7 @@
 package main
 
 import (
-	u "ubftab"
+	u "github.com/stevemqeen/endurox-connect/go/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

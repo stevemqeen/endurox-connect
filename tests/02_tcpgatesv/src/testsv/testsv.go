@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	u "ubftab"
 	"runtime"
+
+	u "github.com/stevemqeen/endurox-connect/tests/02_tcpgatesv/src/ubftab"
+
 	atmi "github.com/endurox-dev/endurox-go"
 )
 

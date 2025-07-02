@@ -36,14 +36,14 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
-	"exutil"
 	"fmt"
 	"net"
 	"os"
 	"sync"
 	"time"
 
-	u "ubftab"
+	"github.com/stevemqeen/endurox-connect/go/src/exutil"
+	u "github.com/stevemqeen/endurox-connect/go/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

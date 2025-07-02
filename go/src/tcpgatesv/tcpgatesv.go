@@ -34,14 +34,14 @@ package main
 
 import (
 	"crypto/tls"
-	"exutil"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	//	"runtime"
-	u "ubftab"
+	"github.com/stevemqeen/endurox-connect/go/src/exutil"
+	u "github.com/stevemqeen/endurox-connect/go/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

@@ -1,7 +1,7 @@
 package main
 
 import (
-	u "ubftab"
+	u "github.com/stevemqeen/endurox-connect/tests/02_tcpgatesv/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

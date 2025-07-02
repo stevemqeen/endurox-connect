@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	u "ubftab"
+	u "github.com/stevemqeen/endurox-connect/tests/03_restout/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

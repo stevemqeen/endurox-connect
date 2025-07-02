@@ -33,7 +33,7 @@
 package main
 
 import (
-	"exutil"
+	"github.com/stevemqeen/endurox-connect/go/src/exutil"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )

@@ -37,12 +37,13 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	//	"io"
-	"exutil"
 	"net"
 	"net/http"
 	"strconv"
 	"time"
-	u "ubftab"
+
+	"github.com/stevemqeen/endurox-connect/go/src/exutil"
+	u "github.com/stevemqeen/endurox-connect/go/src/ubftab"
 
 	atmi "github.com/endurox-dev/endurox-go"
 )
