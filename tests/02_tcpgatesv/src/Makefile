@@ -1,6 +1,5 @@
 # Do recursive builds
 all:
-	go get -u github.com/endurox-dev/endurox-go
 	$(MAKE) -C ubftab
 	$(MAKE) -C testsv
 	$(MAKE) -C testcl

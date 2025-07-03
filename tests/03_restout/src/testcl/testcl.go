@@ -7,9 +7,9 @@ import (
 	"os"
 	"strconv"
 
-	u "github.com/stevemqeen/endurox-connect/tests/03_restout/src/ubftab"
+	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 /*

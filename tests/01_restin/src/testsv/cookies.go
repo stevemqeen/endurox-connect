@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/stevemqeen/endurox-connect/tests/01_restin/src/ubftab"
+	"ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Cookies UBF service

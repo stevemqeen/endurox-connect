@@ -35,10 +35,10 @@ package exutil
 import (
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 var MRootCAs *x509.CertPool = nil //Loaded root cer
@@ -59,7 +59,7 @@ func LoadRootCAs(ac *atmi.ATMICtx, carootsfiles string) error {
 
 		ac.TpLogInfo("Loading root CA: %s", crt_arr[i])
 
-		caCert, err := ioutil.ReadFile(crt_arr[i])
+		caCert, err := os.ReadFile(crt_arr[i])
 		if err != nil {
 			ac.TpLogError("Failed to read CA root cert [%s]: %s", crt_arr[i], err)
 			return fmt.Errorf("Failed to read CA root cert [%s]: %s", crt_arr[i], err)

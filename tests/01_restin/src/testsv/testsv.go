@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	u "github.com/stevemqeen/endurox-connect/tests/01_restin/src/ubftab"
+	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Will set the trace file

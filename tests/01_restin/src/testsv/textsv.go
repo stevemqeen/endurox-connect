@@ -1,6 +1,6 @@
 package main
 
-import atmi "github.com/endurox-dev/endurox-go"
+import atmi "github.com/endurox-dev/endurox-go/v2"
 
 //Text service
 //@param ac ATMI Context

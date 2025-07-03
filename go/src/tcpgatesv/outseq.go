@@ -35,7 +35,7 @@ package main
 import (
 	"sync"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //ATMI Out message dispatching block

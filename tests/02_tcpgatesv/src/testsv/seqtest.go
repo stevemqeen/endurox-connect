@@ -1,9 +1,9 @@
 package main
 
 import (
-	u "github.com/stevemqeen/endurox-connect/tests/02_tcpgatesv/src/ubftab"
+	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 var Msequence byte = 0

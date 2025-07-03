@@ -37,7 +37,7 @@ package main
 import (
 	"unsafe"
 	"errors"
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 /*

@@ -35,15 +35,14 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/stevemqeen/endurox-connect/go/src/ubftab"
+	"ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 const (
@@ -129,7 +128,7 @@ func handleFileUploadReq(ac *atmi.ATMICtx, bufu *atmi.TypedUBF, svc *ServiceMap,
 
 		//Add the file name to received rctx
 
-		tempfile, err = ioutil.TempFile(svc.Tempdir, fmt.Sprintf("%s-%s", progsection, M_cctag))
+		tempfile, err = os.CreateTemp(svc.Tempdir, fmt.Sprintf("%s-%s", progsection, M_cctag))
 		if err != nil {
 			return atmi.NewCustomATMIError(atmi.TPEOS,
 				fmt.Sprintf("Error while creating temp file: %s", err.Error()))

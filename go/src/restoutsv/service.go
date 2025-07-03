@@ -37,7 +37,7 @@ import (
 	"fmt"
 	"time"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 /*

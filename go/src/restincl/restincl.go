@@ -50,9 +50,9 @@ import (
 	"strings"
 	"syscall"
 
-	u "github.com/stevemqeen/endurox-connect/go/src/ubftab"
+	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 /*

@@ -33,10 +33,10 @@
 package main
 
 import (
-	"github.com/stevemqeen/endurox-connect/go/src/exutil"
-	u "github.com/stevemqeen/endurox-connect/go/src/ubftab"
+	"exutil"
+	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Generate error that connection is not found
