@@ -35,7 +35,7 @@ package main
 import (
 	"exutil"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Zero sending periodic stopwatch

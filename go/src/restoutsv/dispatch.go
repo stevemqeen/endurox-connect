@@ -35,16 +35,16 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"io/ioutil"
-	//	"io"
-	"exutil"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
 	"time"
+
+	"exutil"
 	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Map HTTP Error
@@ -410,7 +410,7 @@ func XATMIDispatchCall(pool *XATMIPool, nr int, ctxData *atmi.TPSRVCTXDATA,
 		}
 	}
 
-	body, errN := ioutil.ReadAll(resp.Body)
+	body, errN := io.ReadAll(resp.Body)
 	//Allow to return connection to pool
 	//io.Copy(ioutil.Discard, resp.Body)
 

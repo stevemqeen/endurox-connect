@@ -36,16 +36,16 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
-	"exutil"
 	"fmt"
 	"net"
 	"os"
 	"sync"
 	"time"
 
+	"exutil"
 	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //About incoming & outgoing messages:

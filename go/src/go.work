@@ -1,0 +1,9 @@
+go 1.24
+
+use (
+    ./exutil
+    ./restincl
+    ./restoutsv
+    ./tcpgatesv
+    ./ubftab
+)

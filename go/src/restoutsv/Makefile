@@ -1,22 +1,9 @@
-SOURCEDIR=.
-SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
+export GOBIN?=$(shell pwd)
 
-BINARY=restoutsv
+BINARY=${GOBIN}/restoutsv
 
-VERSION=1.0.0
-BUILD_TIME=`date +%FT%T%z`
+all:
+	go build ${LDFLAGS} -o ${BINARY}
 
-#LDFLAGS=-ldflags "-X github.com/ariejan/roll/core.Version=${VERSION} -X github.com/ariejan/roll/core.BuildTime=${BUILD_TIME}"
-
-.DEFAULT_GOAL: $(BINARY)
-
-$(BINARY): $(SOURCES)
-	go build ${LDFLAGS} -o ${BINARY} *.go
-
-.PHONY: install
-install:
-	go install ${LDFLAGS} ./...
-
-.PHONY: clean
 clean:
-	if [ -f ${BINARY} ] ; then rm ${BINARY} ; fi
+	rm -f ${BINARY}

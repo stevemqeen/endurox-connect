@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 type TestJSONMsg struct {

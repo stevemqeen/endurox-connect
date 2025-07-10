@@ -33,7 +33,7 @@
 package main
 
 import (
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Run scheduled tasks for advertise/unadvertise

@@ -6,9 +6,10 @@ package main
 import (
 	"os/exec"
 	"strings"
+
 	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 const (

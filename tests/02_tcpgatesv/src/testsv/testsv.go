@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	u "ubftab"
 	"runtime"
-	atmi "github.com/endurox-dev/endurox-go"
+
+	u "ubftab"
+
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 const (

@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"strconv"
+
 	"ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Incoming serivce copy some stuff test fields

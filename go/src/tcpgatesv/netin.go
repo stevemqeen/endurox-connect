@@ -35,7 +35,7 @@ package main
 import (
 	u "ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Allocate UBF buffer for holding the full

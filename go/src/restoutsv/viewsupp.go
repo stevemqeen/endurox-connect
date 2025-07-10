@@ -35,7 +35,7 @@ package main
 import (
 	"fmt"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 //Install error code in the view, Note max allowed error message size is 1024 bytes

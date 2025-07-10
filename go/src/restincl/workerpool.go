@@ -35,7 +35,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -44,9 +43,10 @@ import (
 	"encoding/base64"
 	"os"
 	"io"
+
 	"ubftab"
 
-	atmi "github.com/endurox-dev/endurox-go"
+	atmi "github.com/endurox-dev/endurox-go/v2"
 )
 
 /*
@@ -1010,7 +1010,7 @@ func handleMessage(ac *atmi.ATMICtx, svc *ServiceMap, w http.ResponseWriter,
 		var body []byte
 		if !svc.Parseform && !svc.Fileupload {
 
-			body, _ = ioutil.ReadAll(req.Body)
+			body, _ = io.ReadAll(req.Body)
 			ac.TpLogDebug("Requesting service [%s] buffer [%s]",
 				svc.Svc, string(body))
 		}

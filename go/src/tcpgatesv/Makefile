@@ -1,22 +1,9 @@
+export GOBIN?=$(shell pwd)
 
-SOURCEDIR=.
-SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
+BINARY=${GOBIN}/tcpgatesv
 
-BINARY=tcpgatesv
-LDFLAGS=
+all:
+	go build ${LDFLAGS} -o ${BINARY}
 
-VERSION=1.0.0
-BUILD_TIME=`date +%FT%T%z`
-
-.DEFAULT_GOAL: $(BINARY)
-
-$(BINARY): $(SOURCES)
-	go build ${LDFLAGS} -o ${BINARY} *.go
-
-.PHONY: install
-install:
-	go install ${LDFLAGS} ./...
-
-.PHONY: clean
 clean:
-	if [ -f ${BINARY} ] ; then rm ${BINARY} ; fi
+	rm -f ${BINARY}

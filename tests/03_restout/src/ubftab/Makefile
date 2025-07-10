@@ -23,8 +23,6 @@ LDFLAGS=
 
 $(OUTPUT): $(SOURCES)
 	mkfldhdr -m1 -p${PACKAGE}
-	go build ${LDFLAGS} -o ${PACKAGE} *.go
-	go install ${LDFLAGS} ./...
 
 .PHONY: clean
 clean:
